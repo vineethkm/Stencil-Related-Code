@@ -1,0 +1,102 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+ no time accumulated
+
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  Ts/call  Ts/call  name    
+  0.00      0.00     0.00     6559     0.00     0.00  std::__array_traits<int, 3ul>::_S_ref(int const (&) [3], unsigned long)
+  0.00      0.00     0.00     3553     0.00     0.00  std::array<int, 3ul>::operator[](unsigned long)
+  0.00      0.00     0.00     3006     0.00     0.00  std::array<int, 3ul>::operator[](unsigned long) const
+  0.00      0.00     0.00     3000     0.00     0.00  lattice::lattice_iterator<3u>::dereference() const
+  0.00      0.00     0.00     3000     0.00     0.00  lattice::lattice_iterator<3u>::operator*() const
+  0.00      0.00     0.00     1001     0.00     0.00  lattice::lattice_iterator<3u>::equal(lattice::lattice_iterator<3u> const&) const
+  0.00      0.00     0.00     1001     0.00     0.00  lattice::lattice_iterator<3u>::operator==(lattice::lattice_iterator<3u> const&) const
+  0.00      0.00     0.00     1001     0.00     0.00  lattice::lattice_iterator<3u>::operator!=(lattice::lattice_iterator<3u> const&) const
+  0.00      0.00     0.00     1000     0.00     0.00  lattice::lattice_iterator<3u>::increment()
+  0.00      0.00     0.00     1000     0.00     0.00  lattice::lattice_iterator<3u>::operator++(int)
+  0.00      0.00     0.00     1000     0.00     0.00  lattice::lattice_iterator<3u>::operator++()
+  0.00      0.00     0.00        1     0.00     0.00  _GLOBAL__sub_I_main
+  0.00      0.00     0.00        1     0.00     0.00  __static_initialization_and_destruction_0(int, int)
+  0.00      0.00     0.00        1     0.00     0.00  lattice::lattice_iterator<3u>::minus(std::array<int, 3ul> const&, std::array<int, 3ul> const&)
+  0.00      0.00     0.00        1     0.00     0.00  lattice::lattice_iterator<3u>::lattice_iterator(std::array<int, 3ul> const&, std::array<int, 3ul> const&)
+  0.00      0.00     0.00        1     0.00     0.00  lattice::lattice_iterator<3u>::lattice_iterator()
+
+			Call graph
+
+
+granularity: each sample hit covers 2 byte(s) no time propagated
+
+index % time    self  children    called     name
+                0.00    0.00    3006/6559        std::array<int, 3ul>::operator[](unsigned long) const [10]
+                0.00    0.00    3553/6559        std::array<int, 3ul>::operator[](unsigned long) [9]
+[8]      0.0    0.00    0.00    6559         std::__array_traits<int, 3ul>::_S_ref(int const (&) [3], unsigned long) [8]
+-----------------------------------------------
+                0.00    0.00       3/3553        lattice::lattice_iterator<3u>::minus(std::array<int, 3ul> const&, std::array<int, 3ul> const&) [21]
+                0.00    0.00    3550/3553        lattice::lattice_iterator<3u>::increment() [16]
+[9]      0.0    0.00    0.00    3553         std::array<int, 3ul>::operator[](unsigned long) [9]
+                0.00    0.00    3553/6559        std::__array_traits<int, 3ul>::_S_ref(int const (&) [3], unsigned long) [8]
+-----------------------------------------------
+                0.00    0.00       6/3006        lattice::lattice_iterator<3u>::minus(std::array<int, 3ul> const&, std::array<int, 3ul> const&) [21]
+                0.00    0.00    3000/3006        main [6]
+[10]     0.0    0.00    0.00    3006         std::array<int, 3ul>::operator[](unsigned long) const [10]
+                0.00    0.00    3006/6559        std::__array_traits<int, 3ul>::_S_ref(int const (&) [3], unsigned long) [8]
+-----------------------------------------------
+                0.00    0.00    3000/3000        lattice::lattice_iterator<3u>::operator*() const [12]
+[11]     0.0    0.00    0.00    3000         lattice::lattice_iterator<3u>::dereference() const [11]
+-----------------------------------------------
+                0.00    0.00    3000/3000        main [6]
+[12]     0.0    0.00    0.00    3000         lattice::lattice_iterator<3u>::operator*() const [12]
+                0.00    0.00    3000/3000        lattice::lattice_iterator<3u>::dereference() const [11]
+-----------------------------------------------
+                0.00    0.00    1001/1001        lattice::lattice_iterator<3u>::operator==(lattice::lattice_iterator<3u> const&) const [14]
+[13]     0.0    0.00    0.00    1001         lattice::lattice_iterator<3u>::equal(lattice::lattice_iterator<3u> const&) const [13]
+-----------------------------------------------
+                0.00    0.00    1001/1001        lattice::lattice_iterator<3u>::operator!=(lattice::lattice_iterator<3u> const&) const [15]
+[14]     0.0    0.00    0.00    1001         lattice::lattice_iterator<3u>::operator==(lattice::lattice_iterator<3u> const&) const [14]
+                0.00    0.00    1001/1001        lattice::lattice_iterator<3u>::equal(lattice::lattice_iterator<3u> const&) const [13]
+-----------------------------------------------
+                0.00    0.00    1001/1001        main [6]
+[15]     0.0    0.00    0.00    1001         lattice::lattice_iterator<3u>::operator!=(lattice::lattice_iterator<3u> const&) const [15]
+                0.00    0.00    1001/1001        lattice::lattice_iterator<3u>::operator==(lattice::lattice_iterator<3u> const&) const [14]
+-----------------------------------------------
+                0.00    0.00    1000/1000        lattice::lattice_iterator<3u>::operator++() [18]
+[16]     0.0    0.00    0.00    1000         lattice::lattice_iterator<3u>::increment() [16]
+                0.00    0.00    3550/3553        std::array<int, 3ul>::operator[](unsigned long) [9]
+-----------------------------------------------
+                0.00    0.00    1000/1000        main [6]
+[17]     0.0    0.00    0.00    1000         lattice::lattice_iterator<3u>::operator++(int) [17]
+                0.00    0.00    1000/1000        lattice::lattice_iterator<3u>::operator++() [18]
+-----------------------------------------------
+                0.00    0.00    1000/1000        lattice::lattice_iterator<3u>::operator++(int) [17]
+[18]     0.0    0.00    0.00    1000         lattice::lattice_iterator<3u>::operator++() [18]
+                0.00    0.00    1000/1000        lattice::lattice_iterator<3u>::increment() [16]
+-----------------------------------------------
+                0.00    0.00       1/1           __libc_csu_init [27]
+[19]     0.0    0.00    0.00       1         _GLOBAL__sub_I_main [19]
+                0.00    0.00       1/1           __static_initialization_and_destruction_0(int, int) [20]
+-----------------------------------------------
+                0.00    0.00       1/1           _GLOBAL__sub_I_main [19]
+[20]     0.0    0.00    0.00       1         __static_initialization_and_destruction_0(int, int) [20]
+-----------------------------------------------
+                0.00    0.00       1/1           lattice::lattice_iterator<3u>::lattice_iterator(std::array<int, 3ul> const&, std::array<int, 3ul> const&) [22]
+[21]     0.0    0.00    0.00       1         lattice::lattice_iterator<3u>::minus(std::array<int, 3ul> const&, std::array<int, 3ul> const&) [21]
+                0.00    0.00       6/3006        std::array<int, 3ul>::operator[](unsigned long) const [10]
+                0.00    0.00       3/3553        std::array<int, 3ul>::operator[](unsigned long) [9]
+-----------------------------------------------
+                0.00    0.00       1/1           main [6]
+[22]     0.0    0.00    0.00       1         lattice::lattice_iterator<3u>::lattice_iterator(std::array<int, 3ul> const&, std::array<int, 3ul> const&) [22]
+                0.00    0.00       1/1           lattice::lattice_iterator<3u>::minus(std::array<int, 3ul> const&, std::array<int, 3ul> const&) [21]
+-----------------------------------------------
+                0.00    0.00       1/1           main [6]
+[23]     0.0    0.00    0.00       1         lattice::lattice_iterator<3u>::lattice_iterator() [23]
+-----------------------------------------------
+
+Index by function name
+
+  [19] _GLOBAL__sub_I_main    [17] lattice::lattice_iterator<3u>::operator++(int) [15] lattice::lattice_iterator<3u>::operator!=(lattice::lattice_iterator<3u> const&) const
+  [20] __static_initialization_and_destruction_0(int, int) [18] lattice::lattice_iterator<3u>::operator++() [10] std::array<int, 3ul>::operator[](unsigned long) const
+  [21] lattice::lattice_iterator<3u>::minus(std::array<int, 3ul> const&, std::array<int, 3ul> const&) [11] lattice::lattice_iterator<3u>::dereference() const [8] std::__array_traits<int, 3ul>::_S_ref(int const (&) [3], unsigned long)
+  [16] lattice::lattice_iterator<3u>::increment() [13] lattice::lattice_iterator<3u>::equal(lattice::lattice_iterator<3u> const&) const [9] std::array<int, 3ul>::operator[](unsigned long)
+  [22] lattice::lattice_iterator<3u>::lattice_iterator(std::array<int, 3ul> const&, std::array<int, 3ul> const&) [12] lattice::lattice_iterator<3u>::operator*() const
+  [23] lattice::lattice_iterator<3u>::lattice_iterator() [14] lattice::lattice_iterator<3u>::operator==(lattice::lattice_iterator<3u> const&) const
