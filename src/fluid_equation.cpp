@@ -1,147 +1,145 @@
-#include<iostream>
-#include "lattice.h"
-#include<array>
-#include<algorithm>
-#include<vector>
-#include<fstream>
+#include <iostream>
+#include <cstring>
+#include <stdlib.h>
+#include <fstream>
 
-using namespace lattice;
+const double stencil4[5] = {-1.0/12.0,4.0/3.0,-5.0/2.0,4.0/3.0,-1.0/12.0};
+const double stencil2[3] = {1.0,-2.0,1.0};
+const size_t m = 200;
+const size_t n = 200;
 
-template <int O>
-double stencil(const int i) {
-    const std::array<double,O+1> coeff = {{1.0,-2.0,1.0}};
-    return coeff[i+O/2];
-}
-
-template <>
-double stencil<4>(const int i) {
-    const std::array<double,4+1> coeff = {{-1.0/12.0,4.0/3.0,-5.0/2.0,4.0/3.0,-1.0/12.0}};
-    return coeff[i+4/2];
-}
-
-int main()
+// Prints the lattice array to the screen
+void printLattice(double lattice[m][n])
 {
-    std::cout<<"This is code to simulate 2d heat equation"<<std::endl;
-    const unsigned int D = 2;
-    typedef std::array<int,D> int_d;
-    const size_t m = 50;
-    const size_t n = 50;
-    const int order = 4;
-    const double h = 1.0/m;
-    const double dt = 0.9*std::pow(h,2)/(-stencil<order>(0)*D);
-    const double r = dt/std::pow(h,2);
-    const double t = 1.0;
-    const int timesteps = t/dt;
-    std::cout << "timesteps = "<<timesteps<<" r = "<<r<<std::endl;
-
-    const int_d min = {{0,0}};
-    const int_d max = {{n+order,m+order}};
-    const int_d min_domain = {{order/2,order/2}};
-    const int_d max_domain = {{n+order/2,m+order/2}};
-    const int_d max_left = {{order/2,m+order}};
-    const int_d min_right = {{n+order/2,0}};
-
-#if __cplusplus > 201402L
-    auto all = make_iterator_range(
-                        lattice_iterator<D>(min,max),
-                        false);
-    auto domain = make_iterator_range(
-                        lattice_iterator<D>(min_domain,max_domain),
-                        false);
-    auto left_boundary = make_iterator_range(
-                        lattice_iterator<D>(min,max_left),
-                        false);
-    auto right_boundary = make_iterator_range(
-                        lattice_iterator<D>(min_right,max),
-                        false);
-#else
-    auto all = make_iterator_range(
-                        lattice_iterator<D>(min,max),
-                        lattice_iterator<D>());
-    auto domain = make_iterator_range(
-                        lattice_iterator<D>(min_domain,max_domain),
-                        lattice_iterator<D>());
-    auto left_boundary = make_iterator_range(
-                        lattice_iterator<D>(min,max_left),
-                        lattice_iterator<D>());
-    auto right_boundary = make_iterator_range(
-                        lattice_iterator<D>(min_right,max),
-                        lattice_iterator<D>());
-#endif
-
-
-    std::vector<double> values0(all.size(),0.0);
-    std::vector<double> values1(all.size(),0.0);
-
-    auto calculate = [&](const int_d& index) {
-        int ret = 0;
-        unsigned int multiplier = 1.0;
-        for (size_t i = 0; i<D; ++i) {
-            if (i > 0) {
-                multiplier *= max[i-1];
-            }
-            ret += multiplier*index[i];
+    for(size_t i = 0;i<m;i++)
+    {
+        for(size_t j = 0;j<n;j++)
+        {
+            std::cout<<lattice[i][j]<<" ";
         }
-        return ret;
-    };
-
-
-    for(const auto& index: left_boundary) {
-        values0[calculate(index)] = 1.0;
-        values1[calculate(index)] = 1.0;
+        std::cout<<std::endl;
     }
-    for(const auto& index: right_boundary) {
-        values0[calculate(index)] = 1.0;
-        values1[calculate(index)] = 1.0;
-    }
+}
 
-    for (int i = 0; i < timesteps; ++i) {
-        for(const auto& index: domain) {
-            const size_t base_index = calculate(index);
-            values1[base_index] = values0[base_index];
-            for (unsigned int d = 0; d < D; d++) {
-                int_d stencil_index = index;
-                for (int j = -order/2; j <= order/2; j++) {
-                    stencil_index[d] = j+index[d];
-                    const double coeff = stencil<order>(j);
-                    values1[base_index] += r*coeff*values0[calculate(stencil_index)];
+// Solves the Steady condition for the 2D Heat Equation using Gauss-Seidel Method
+/*
+void solveStable(double lattice[m][n],size_t iterations,int order)
+{
+    double sum = 0;
+    //double buffer[m+2][n+2]; 
+    //memcpy(buffer,lattice,sizeof(lattice));
+    for(size_t iter = 0; iter<iterations; iter++)
+    {
+        for(size_t i = 1; i<=m; i++)
+        {
+            for(size_t j = 1; j<=n; j++)
+            {
+                sum = 0;
+                for(int h = -order/2; h<=order/2; h+=2)
+                {
+                    sum += lattice[i+h][j];
+                    sum += lattice[i][j+h];
                 }
+                lattice[i][j] = sum/4.0;
             }
         }
-        values1.swap(values0);
     }
 
+}
+*/
 
+// Solves the Unsteady 2D Heat equation using Gauss-seidel method
+void solve(double lattice[m][n],size_t iterations,int order)
+{
+    int d = order/2;
+    int pdg = d;
+    double stencil[5];
+    memset(stencil,0,sizeof(stencil));
+    double dt = 0.01;
+    
+    if(order == 2)
+        memcpy(stencil,stencil2,sizeof(stencil2));
+    else if(order == 4)
+        memcpy(stencil,stencil4,sizeof(stencil4));
+    else
+        return;
+    
+    for(int i =0;i<5;i++)
+        std::cout<<stencil[i]<<" ";
+    std::cout<<std::endl;
+    //double buffer[m+2][n+2]; 
+    //memcpy(buffer,lattice,sizeof(lattice));
 
-    /*
-     * Output an image
-     */
+    double sum = 0;
 
+    for(size_t iter = 0; iter<iterations; iter++)
+    {
+        for(size_t i = pdg; i<m-pdg; i++)
+        {
+            for(size_t j = pdg; j<n-pdg; j++)
+            {
+                sum = 0;
+                for(int h = -d; h<=d; h++)
+                {
+                    sum += stencil[h+d]*lattice[i+h][j];
+                    sum += stencil[h+d]*lattice[i][j+h];
+                }
+                lattice[i][j] += dt*sum;
+            }
+        }
+    }
+}
+
+int main(int argv, char* argc[])
+{
+    std::cout<<"Hello World"<<std::endl;
+    int order = atoi(argc[1]);
+    double lattice1[m][n];
+
+    // Set all values to 0
+    memset(lattice1,0,sizeof(lattice1));
+
+    // Setting Boundary Conditions
+    // Left and right boundaries are 100
+    if(order == 2)
+    {
+        for(size_t i = 0;i<m;i++)
+        {
+            lattice1[i][0] = 100.0;
+            lattice1[i][n-1] = 100.0;
+        }
+    } else if(order == 4)
+    {
+        for(size_t i = 0;i<m;i++)
+        {
+            lattice1[i][0] = 100.0;
+            lattice1[i][1] = 100.0;
+            lattice1[i][n-1] = 100.0;
+            lattice1[i][n-2] = 100.0;
+        }
+    }else return 0;
+
+    // Up and Down boundaries are 0
+
+    solve(lattice1,10000,order);
+    std::cout<<"Output:"<<std::endl;
+
+    printLattice(lattice1);
+
+    // Write lattice values to file
     std::ofstream f("test.pgm",std::ios_base::out
                               |std::ios_base::binary
                               |std::ios_base::trunc
                    );
 
-    int maxColorValue = 255;
-
-    std::vector<unsigned char> image(all.size());
-    auto minmax = std::minmax_element(values0.begin(),values0.end());
-    std::transform(values0.begin(),values0.end(),image.begin(),[&](const double value) {
-            uint8_t val = maxColorValue*(value-*std::get<0>(minmax))
-                    /(*std::get<1>(minmax)-*std::get<0>(minmax));
-            return val;
-
-        });
-
-    f << "P5\n" << (max[1]-min[1]) << " " << (max[0]-min[0]) << "\n" << maxColorValue << "\n";
-
-    for(int i=0; i<max[0]; ++i) {
-        const size_t index = i*(max[1]-min[1]);
-        f.write( reinterpret_cast<const char*>(&image[index]), (max[1]-min[1]) );
+    f<<"P2\n"<<m<<" "<<n<<"\n"<<100<<"\n";
+    for(size_t i = 0; i<m; i++)
+    {
+        for(size_t j = 0; j<n; j++)
+        {
+            f<<(int)lattice1[i][j]<<" ";
+        }
     }
-
-
-
-    f << std::flush;
+    f<<std::flush;
     return 0;
 }
