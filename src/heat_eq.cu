@@ -7,7 +7,7 @@ __constant__ double stencil4[5] = {-1.0/12.0,4.0/3.0,-5.0/2.0,4.0/3.0,-1.0/12.0}
 __constant__ double stencil2[3] = {1.0,-2.0,1.0};
 __constant__ size_t mGpu = 200;
 __constant__ size_t nGpu = 200;
-double dt = 0.01;
+__constant__ double dt = 0.01;
 const size_t m = 200;
 const size_t n = 200;
 
@@ -23,108 +23,100 @@ void printLattice(double lattice[m][n])
     }
 }
 
-__global__ void solveIter(double *lattice, double* dt, int* order)
+__global__ void solveIter(double *lattice, int* order)
 {
     extern __shared__ double mem[];
     double **lat;
-    //lat[0] = mem;
+    *lat = mem;
     int c = blockIdx.x*blockDim.x + threadIdx.x;
     int r = blockIdx.y*blockDim.y + threadIdx.y;
-    int i = r*n + c;
+    int i = r*nGpu + c;
+    int pdg = (*order)/2;
+    double sum = 0;
+    printf("hello world");
+    
+    lattice[i] = 1.0;
     /*
     // Store lattice in shared memroy
     lat[r][c] = lattice[i];
     __syncthreads();
 
-    lattice[i] = lat[r][c];
-    // Make use of shared memory to act as a cache for threads within the block
-    ///*
-    int order = 2;
+    lattice[i] = 1.0;
+    __syncthreads();
+    //
 
-    double sum = 0;
-    for(int h = -order/2; h<=order/2; h+=2)
+        // Code for after getting errors fixed
+    if(r<pdg || r>=m-pdg || c<pdg || c>=n-pdg)
+    	return;
+
+    if(*order == 2)
     {
-        sum += buffer[x+h][y];
-        sum += buffer[x][y+h];
+        sum = 0;
+	for(int h = -pdg; h<=pdg; h++)
+	{
+	    sum += stencil2[h+pdg]*lat[r+h][c];
+	    sum += stencil2[h+pdg]*lat[r][c+h];
+	}
+	lattice[i] += dt*sum;
+    } else if(*order == 4)
+    {
+        sum = 0;
+	for(int h = -pdg; h<=pdg; h++)
+	{
+	    sum += stencil4[h+pdg]*lat[r+h][c];
+	    sum += stencil4[h+pdg]*lat[r][c+h];
+	}
+	lattice[i] += dt*sum;
     }
-    lattice[x][y] = sum/4.0;
+    return;
     */
 }
 
 // Solves the Unsteady 2D Heat equation using Gauss-seidel method
 void solve(double lattice[m][n],size_t iterations,int order)
 {
-    int d = order/2;
-    int pdg = d;
-    double stencil[5];
-    memset(stencil,0,sizeof(stencil));
     //double dt = 0.01;
-    
-    for(int i =0;i<5;i++)
-        std::cout<<stencil[i]<<" ";
-    std::cout<<std::endl;
-    std::cout<<"pe"<<std::endl;
     // Cuda allocations
     // 1d array of lattice
     double *flatLattice, *flatLatticeGpu;
     flatLattice = (double*)malloc(m*n*sizeof(double));
     memcpy(flatLattice, lattice[0], m*n*sizeof(double)); 
 
-    std::cout<<"pe"<<std::endl;
     cudaMalloc(&flatLatticeGpu, m*n*sizeof(double));
     cudaMemcpy(flatLatticeGpu, flatLattice, m*n*sizeof(double),cudaMemcpyHostToDevice);
     
-    std::cout<<"pe"<<std::endl;
-
     // Constants
-    double *dtGpu;
-    double *dtCpu = (double*)malloc(sizeof(double));
-    *dtCpu = dt;
     int *orderGpu;
     int *orderCpu = (int*)malloc(sizeof(int));
     *orderCpu = order;
-    cudaMalloc(&dtGpu, sizeof(double));
     cudaMalloc(&orderGpu, sizeof(int));
-    cudaMemcpy(dtGpu,dtGpu, sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(orderGpu,orderCpu, sizeof(int), cudaMemcpyHostToDevice);
 
     // Create dim3 variables for grid and block
     dim3 block(20,20);
     dim3 grid(m/20,n/20);
-
-    std::cout<<"pe"<<std::endl;
-    double sum = 0;
     for(size_t iter = 0; iter<iterations; iter++)
     {
-	/*
-        for(size_t i = pdg; i<m-pdg; i++)
-        {
-            for(size_t j = pdg; j<n-pdg; j++)
-            {
-                sum = 0;
-                for(int h = -d; h<=d; h++)
-                {
-                    sum += stencil[h+d]*lattice[i+h][j];
-                    sum += stencil[h+d]*lattice[i][j+h];
-                }
-                lattice[i][j] += dt*sum;
-            }
-        }
-	*/
-    std::cout<<"pe"<<std::endl;
-	solveIter<<<grid,block,n*m*sizeof(double)>>>(flatLatticeGpu, dtGpu, orderGpu);
+	
+	solveIter<<<grid,block,n*m*sizeof(double)>>>(flatLatticeGpu, orderGpu);
         // Wait until Kernel is done
         cudaDeviceSynchronize();
     }
-
+	//solveIter<<<grid,block,n*m*sizeof(double)>>>(flatLatticeGpu, orderGpu);
+	//char* err = cudaGetErrorString(cudaPeekAtLastError);
+	std::cout<<err<<std::endl;
+        cudaDeviceSynchronize();
     cudaMemcpy(flatLattice, flatLatticeGpu, m*n*sizeof(double),cudaMemcpyDeviceToHost);
     memcpy(lattice[0], flatLattice, m*n*sizeof(double));
+    for(int i =0;i<200;i++)
+	    std::cout<<flatLattice[i]<<" ";
+    std::cout<<std::endl;
     cudaFree(flatLatticeGpu);
-    cudaFree(&dtGpu);
+    //cudaFree(&dtGpu);
     cudaFree(&orderGpu);
-    free(flatLatticeGpu);
-    free(dtCpu);
-    free(orderCpu);
+    //free(flatLatticeGpu);
+    //free(dtCpu);
+    //free(orderCpu);
 }
 
 int main(int argv, char** argc)
@@ -160,7 +152,7 @@ int main(int argv, char** argc)
     solve(lattice1,10000,order);
     std::cout<<"Output:"<<std::endl;
 
-    printLattice(lattice1);
+    //printLattice(lattice1);
 
     // Write lattice values to file
     std::ofstream f("test.pgm",std::ios_base::out
