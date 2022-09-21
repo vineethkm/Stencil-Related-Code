@@ -1,11 +1,11 @@
 
 all: src/heat_eq.cpp
 	mkdir build
-	g++ -pg -Wall src/heat_eq.cpp -o build/heat_equation
+	g++ -pg -Wall -O3 src/heat_eq.cpp -o build/heat_equation
 
-fluideq: src/fluid_equation.cpp
+cuda: src/heat_eq.cu
 	mkdir build
-	g++ -pg -Wall src/fluid_equation.cpp src/lattice.h src/lattice_iterator.h src/range.h -o build/fluid_equation
+	nvcc src/heat_eq.cu -o build/heat_equation
 
 clean:
 	rm -r build

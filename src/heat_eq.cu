@@ -90,7 +90,7 @@ __global__ void solveIter(double *lattice, int* order)
 
 
 /*
-__global__ void solveIter(double *lattice, int* order)
+__global__ void solveIterShared(double *lattice, int* order)
 {
     extern __shared__ char mem[];
     //double lat[m][n];
