@@ -5,8 +5,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-
 #define gpuerrchk(ans) { gpuAssert((ans), __FILE__, __LINE__);}
+
 inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort=true)
 {
 	if(code!= cudaSuccess)
@@ -16,8 +16,8 @@ inline void gpuAssert(cudaError_t code, const char* file, int line, bool abort=t
 	}
 }
 
-const int m = 400;
-const int n = 400;
+const int m = 256;
+const int n = 256;
 __constant__ double stencil4[5] = {-1.0/12.0,4.0/3.0,-5.0/2.0,4.0/3.0,-1.0/12.0};
 __constant__ double stencil2[3] = {1.0,-2.0,1.0};
 __constant__ int mGpu = m;
@@ -39,26 +39,11 @@ void printLattice(double lattice[m][n])
 
 __global__ void solveIter(double *lattice, int* order)
 {
-    //extern __shared__ char mem[];
-    //double lat[m][n];
-    //lat[0] = (double*)&mem[0];
     int c = blockIdx.x*blockDim.x + threadIdx.x;
     int r = blockIdx.y*blockDim.y + threadIdx.y;
     int i = r*nGpu + c;
     int pdg = (*order)/2;
     double sum = 0;
-    //printf("hello world");
-    //printf("(%d,%d)",r,c);
-    
-    //lattice[i] = 1.0;
-    
-    // Store lattice in shared memroy
-    //mem[i] = lattice[i];
-    //__syncthreads();
-
-    //lattice[i] = 1.0;
-    //__syncthreads();
-    //
     
     // Code for after getting errors fixed
     if(r<pdg || r>=m-pdg || c<pdg || c>=n-pdg)
@@ -67,85 +52,80 @@ __global__ void solveIter(double *lattice, int* order)
     if(*order == 2)
     {
         sum = 0;
-	for(int h = -pdg; h<=pdg; h++)
-	{
-	    sum += stencil2[h+pdg]*(lattice[(r+h)*nGpu + c]);
-	    sum += stencil2[h+pdg]*(lattice[(r*nGpu)+c+h]);
-	}
+        for(int h = -pdg; h<=pdg; h++)
+        {
+            sum += stencil2[h+pdg]*(lattice[i + m*h]);
+            sum += stencil2[h+pdg]*(lattice[i + h]);
+        }
     } else if(*order == 4)
     {
         sum = 0;
-	for(int h = -pdg; h<=pdg; h++)
-	{
-	    sum += stencil4[h+pdg]*lattice[(r+h)*nGpu+c];
-	    sum += stencil4[h+pdg]*lattice[(r*nGpu)+c+h];
-	}
+        for(int h = -pdg; h<=pdg; h++)
+        {
+            sum += stencil4[h+pdg]*lattice[i + m*h];
+            sum += stencil4[h+pdg]*lattice[i + h];
+        }
     }
     __syncthreads();
-    //printf("%lf",sum);
-    lattice[i] = dt*sum;
+    lattice[i] += dt*sum;
     return;
     
 }
 
-
-/*
 __global__ void solveIterShared(double *lattice, int* order)
 {
-    extern __shared__ char mem[];
-    //double lat[m][n];
-    //lat[0] = (double*)&mem[0];
+    extern __shared__ double mem[];
     int c = blockIdx.x*blockDim.x + threadIdx.x;
     int r = blockIdx.y*blockDim.y + threadIdx.y;
-    int i = r*nGpu + c;
+    int i = r*n + c;
     int pdg = (*order)/2;
+    int j = (pdg+threadIdx.y)*blockDim.x + pdg + threadIdx.x;
+    int l = (*order)+blockDim.x;
     double sum = 0;
-    //printf("hello world");
     
-    //lattice[i] = 1.0;
-    
-    // Store lattice in shared memroy
-    mem[i] = lattice[i];
-    __syncthreads();
+    // Store lattice in shared memory
+    mem[j] = lattice[i];
 
-    lattice[i] = 1.0;
-    __syncthreads();
-    //
-
-
-        // Code for after getting errors fixed
     if(r<pdg || r>=m-pdg || c<pdg || c>=n-pdg)
     	return;
-
+    if(threadIdx.x ==0)
+        for(int k =0; k<=pdg; k++)
+            mem[j-k] = lattice[i-k];
+    if(threadIdx.y ==0)
+        for(int k =0; k<=pdg; k++)
+            mem[j-l*k] = lattice[i-n*k];
+    if(threadIdx.x == (blockDim.x -1))
+        for(int k =0; k<=pdg; k++)
+            mem[j+k] = lattice[i+k];
+    if(threadIdx.x ==(blockDim.y -1))
+        for(int k =0; k<=pdg; k++)
+            mem[j+l*k] = lattice[i+l*k];
+    __syncthreads();
     if(*order == 2)
     {
         sum = 0;
-	for(int h = -pdg; h<=pdg; h++)
-	{
-	    sum += stencil2[h+pdg]*lat[r+h][c];
-	    sum += stencil2[h+pdg]*lat[r][c+h];
-	}
-	lattice[i] += dt*sum;
+        for(int h = -pdg; h<=pdg; h++)
+        {
+            sum += stencil2[h+pdg]*(mem[j + l*h]);
+            sum += stencil2[h+pdg]*(mem[j + h]);
+        }
     } else if(*order == 4)
     {
         sum = 0;
-	for(int h = -pdg; h<=pdg; h++)
-	{
-	    sum += stencil4[h+pdg]*lat[r+h][c];
-	    sum += stencil4[h+pdg]*lat[r][c+h];
-	}
-	lattice[i] += dt*sum;
+        for(int h = -pdg; h<=pdg; h++)
+        {
+            sum += stencil4[h+pdg]*mem[j + l*h];
+            sum += stencil4[h+pdg]*mem[j + h];
+        }
     }
+    __syncthreads();
+	lattice[i] += dt*sum;
     return;
-    
-    
 }
-*/
 
 // Solves the Unsteady 2D Heat equation using Gauss-seidel method
 void solve(double lattice[m][n],size_t iterations,int order)
 {
-    //double dt = 0.01;
     // Cuda allocations
     // 1d array of lattice
     double *flatLattice, *flatLatticeGpu;
@@ -163,32 +143,29 @@ void solve(double lattice[m][n],size_t iterations,int order)
     gpuerrchk(cudaMemcpy(orderGpu,orderCpu, sizeof(int), cudaMemcpyHostToDevice));
 
     // Create dim3 variables for grid and block
-    dim3 block(20,20);
-    dim3 grid(m/20,n/20);
+    int blockSize = 32;
+    dim3 block(blockSize,blockSize);
+    dim3 grid(m/blockSize,n/blockSize);
+    size_t memSize = (blockSize+order)*(blockSize+order)*sizeof(double);
     for(size_t iter = 0; iter<iterations; iter++)
     {
-	
-	solveIter<<<grid,block>>>(flatLatticeGpu, orderGpu);
-        // Wait until Kernel is done n*m*sizeof(double)
-        gpuerrchk(cudaDeviceSynchronize());
-	if(iter%1000 == 0)
-	    std::cout<<"Iteration: "<<iter<<std::endl;
+        //solveIter<<<grid,block>>>(flatLatticeGpu, orderGpu);
+        solveIterShared<<grid,block,memSize>>>(flatLatticeGpu,orderGpu);
+
+        if(iter%1000 == 0)
+            std::cout<<"Iteration: "<<iter<<std::endl;
     }
-	//solveIter<<<grid,block>>>(flatLatticeGpu, orderGpu);
 	//char* err = cudaGetErrorString(cudaPeekAtLastError);
 	//std::cout<<err<<std::endl;
-        //cudaDeviceSynchronize();
     gpuerrchk(cudaMemcpy(flatLattice, flatLatticeGpu, m*n*sizeof(double),cudaMemcpyDeviceToHost));
     memcpy(lattice[0], flatLattice, m*n*sizeof(double));
     for(int i =0;i<200;i++)
 	    std::cout<<flatLattice[i]<<" ";
     std::cout<<std::endl;
     cudaFree(flatLatticeGpu);
-    //cudaFree(&dtGpu);
     cudaFree(orderGpu);
-    //free(flatLatticeGpu);
-    //free(dtCpu);
-    //free(orderCpu);
+    free(flatLatticeCpu);
+    free(orderCpu);
 }
 
 int main(int argv, char** argc)
