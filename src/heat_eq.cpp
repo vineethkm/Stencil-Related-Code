@@ -8,6 +8,23 @@ const double stencil2[3] = {1.0,-2.0,1.0};
 size_t m = 0;
 size_t n = 0;
 
+inline size_t top(size_t n)
+{
+    return (((n & 0xAAAAAAAAAAAAAAAA)-1) & 0xAAAAAAAAAAAAAAAA) | (n & 0x5555555555555555);
+}
+inline size_t bottom(size_t n)
+{
+    return (((n | 0x5555555555555555) + 1) & 0xAAAAAAAAAAAAAAAA) | (n & 0x5555555555555555);
+}
+inline size_t left(size_t n)
+{
+    return (((n & 0x5555555555555555)-1) & 0x5555555555555555) | (n & 0xAAAAAAAAAAAAAAAA);
+}
+inline size_t right(size_t n)
+{
+    return (((n | 0xAAAAAAAAAAAAAAAA) + 1) & 0x5555555555555555) | (n & 0xAAAAAAAAAAAAAAAA);
+}
+
 // Prints the lattice array to the screen
 void printLattice(double** lattice)
 {
@@ -91,41 +108,56 @@ void solveZOrder(double *lattice,size_t iterations,int order)
 {
     int d = order/2;
     int pdg = d;
-    double stencil[5];
-    memset(stencil,0,sizeof(stencil));
     double dt = 0.01;
-    
-    if(order == 2)
-        memcpy(stencil,stencil2,sizeof(stencil2));
-    else if(order == 4)
-        memcpy(stencil,stencil4,sizeof(stencil4));
-    else
-        return;
     
     double sum = 0;
 
-    for(size_t iter = 0; iter<iterations; iter++)
+    if(order == 2)
     {
-        for(size_t i = pdg; i<m-pdg; i++)
+        for(size_t iter = 0; iter<iterations; iter++)
         {
-            for(size_t j = pdg; j<n-pdg; j++)
+            for(size_t i = pdg; i<m-pdg; i++)
             {
-                sum = 0;
-                size_t n = calcZOrder(j,i);
-                /*
-                top    = (((n & 0b10101010) − 1) & 0b10101010) | (n & 0b01010101)
-                bottom = (((n | 0b01010101) + 1) & 0b10101010) | (n & 0b01010101)
-                left   = (((n & 0b01010101) − 1) & 0b01010101) | (n & 0b10101010)
-                right  = (((n | 0b10101010) + 1) & 0b01010101) | (n & 0b10101010)
-                */
-                for(int h = -d; h<=d; h++)
+                for(size_t j = pdg; j<n-pdg; j++)
                 {
-                    // Remove calls to the z order function here
-                    // Reduce calls to the z order function
-                    sum += stencil[h+d]*lattice[calcZOrder(j+h,i)];
-                    sum += stencil[h+d]*lattice[calcZOrder(j,i+h)];
+                    sum = 0;
+                    size_t n = calcZOrder(j,i);
+                    size_t t = top(n);
+                    size_t b = bottom(n);
+                    size_t l = left(n);
+                    size_t r = right(n);
+                    sum += stencil2[0]*(lattice[l]+lattice[t]);
+                    sum += stencil2[2]*(lattice[r]+lattice[b]);
+                    sum += stencil2[1]*2*(lattice[n]);
+                    lattice[n] += dt*sum;
                 }
-                lattice[n] += dt*sum;
+            }
+        }
+    } else if(order == 4)
+    {
+        for(size_t iter = 0; iter<iterations; iter++)
+        {
+            for(size_t i = pdg; i<m-pdg; i++)
+            {
+                for(size_t j = pdg; j<n-pdg; j++)
+                {
+                    sum = 0;
+                    size_t n = calcZOrder(j,i);
+                    size_t t = top(n);
+                    size_t t2 = top(t);
+                    size_t b = bottom(n);
+                    size_t b2 = bottom(b);
+                    size_t l = left(n);
+                    size_t l2 = left(l);
+                    size_t r = right(n);
+                    size_t r2 = right(r);
+                    sum += stencil4[0]*(lattice[l2]+lattice[t2]);
+                    sum += stencil4[1]*(lattice[l]+lattice[t]);
+                    sum += stencil4[2]*2*(lattice[n]);
+                    sum += stencil4[3]*(lattice[r]+lattice[b]);
+                    sum += stencil4[4]*(lattice[r2]+lattice[b2]);
+                    lattice[n] += dt*sum;
+                }
             }
         }
     }
@@ -227,7 +259,7 @@ int main(int argv, char* argc[])
     solveZOrder(latticez,iterations,order);
     std::cout<<"Output:"<<std::endl;
     
-    /*
+    ///*
     for(size_t i =0;i<m;i++)
     {
         for(size_t j=0;j<n;j++)
@@ -235,7 +267,7 @@ int main(int argv, char* argc[])
             lattice1[i][j] = latticez[calcZOrder(j,i)];
         }
     }
-    */
+    //*/
     printLattice(lattice1);
 
     // Write lattice values to file
